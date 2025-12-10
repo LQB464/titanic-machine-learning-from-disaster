@@ -2,268 +2,203 @@
 
 A Kaggle classification project that predicts which passengers survived the sinking of the Titanic using passenger information such as age, sex, ticket class, fare, and engineered features.
 
-Competition link: https://www.kaggle.com/competitions/titanic
+Competition link: https://www.kaggle.com/competitions/titanic  
 
-> Lưu ý cho người xem tiếng Việt: Đây là project Kaggle Titanic được triển khai bằng Jupyter Notebook, tập trung vào EDA, feature engineering và so sánh nhiều mô hình machine learning.
-
----
-
-## Team
-
-Members list:
-
-- Nguyễn Thị Huyền Trang - 23280092 (Leader)  
-- Nguyễn Quang Lập - 23280007  
-- Trương Minh Tiền - 23280088  
-- Lương Quốc Bình - 23280042  
-- Võ Hoàng - 23280060  
+> Lưu ý: EDA và toàn bộ phân tích trực quan nằm trong Notebook. Pipeline xử lý dữ liệu, tạo feature, huấn luyện mô hình và tạo submission đã được tách thành dạng module Python trong thư mục `src/`.
 
 ---
 
-## Repository structure
+## Repository Structure
 
 ```text
 titanic-machine-learning-from-disaster/
-├── dataset/      # Titanic CSV data (train.csv, test.csv, etc. from Kaggle)
-├── notebook/     # Main Jupyter Notebook for analysis and modeling
-└── document/     # Reports or supporting documents for the project
+├── dataset/         # train.csv, test.csv
+├── notebook/        # Jupyter Notebook cho EDA
+│   └── titanic-machine-learning-from-disaster.ipynb
+├── document/        # Tài liệu báo cáo nếu có
+├── src/             # Code pipeline tách riêng thành module
+│   ├── __init__.py
+│   ├── config.py
+│   ├── data.py
+│   ├── features.py
+│   ├── preprocessing.py
+│   ├── modeling.py
+│   ├── training.py
+│   └── main.py
+├── output/          # baseline_results.csv và submission_knn.csv
+├── requirements.txt
+└── README.md
 ````
 
-Main notebook:
+---
 
-* `notebook/titanic-machine-learning-from-disaster.ipynb`
+## Problem Description
 
-This notebook contains the full workflow from data validation, EDA, feature engineering, preprocessing, model training to final evaluation.
+Mục tiêu của bài toán:
+
+> Dự đoán khả năng sống sót của hành khách dựa trên thông tin cá nhân như tuổi, giới tính, hạng vé và nhiều đặc trưng được trích xuất thêm.
+
+Dữ liệu bao gồm:
+
+* `train.csv`: có cột mục tiêu `Survived`
+* `test.csv`: không có `Survived`, dùng để dự đoán nộp Kaggle
+
+Quy trình tổng quát:
+
+1. EDA trong notebook để hiểu dữ liệu
+2. Feature engineering như Title, FamilySize, Cabin flag, FarePerPassenger
+3. Xây dựng preprocessing pipeline
+4. Train baseline models và thử PCA
+5. Feature importance và feature selection
+6. Chọn mô hình tốt nhất (KNN tuned)
+7. Sinh file submission
 
 ---
 
-## Problem description
+## Approach Summary
 
-The goal of the Kaggle competition is to:
+### 1. Data validation & EDA (trong notebook)
 
-> Predict whether a passenger survived the Titanic disaster based on passenger data (name, age, gender, socio-economic class, etc.).
+Bao gồm:
 
-We are given:
+* Missing values
+* Data types
+* Correlation với target
+* Phân tích phân phối Age, Fare, Pclass, Sex, Embarked
+* Survival rate theo từng nhóm
 
-* `train.csv`: includes passenger features and the target `Survived`
-* `test.csv`: same structure but without `Survived` (the target to predict)
+### 2. Feature Engineering
 
-The notebook uses the train set to:
+Một số feature quan trọng:
 
-1. Explore and clean the data
-2. Engineer useful features
-3. Train and evaluate several models
-4. Select the best performing approach
-5. Generate predictions for Kaggle submission (if desired)
+* **Title** từ Name
+* **FamilySize**, **IsAlone**, **FamilySize_Bucketized**
+* **HasCabin**
+* **FarePerPassenger**, **LogFare**
 
----
+Các feature này được chuyển thành module trong `src/features.py`.
 
-## Approach
+### 3. Preprocessing Pipeline
 
-The project is organized in several main steps, reflected in the notebook sections.
+Dùng:
 
-### 1. Data loading and validation
+* `SimpleImputer`
+* `StandardScaler`
+* `OneHotEncoder`
+* `ColumnTransformer`
+* `Pipeline`
 
-* Load `train.csv` into a Pandas DataFrame.
-* Perform data validation and checks:
+Mã trong `src/preprocessing.py`.
 
-  * Missing values
-  * Duplicated rows
-  * Data types
-  * Number of unique values per column
-  * Identify numerical vs categorical features
-  * Check target imbalance for `Survived`
+### 4. Baseline Models
 
-This step ensures that the dataset is clean enough and guides how to handle missing values and outliers.
+Thử nghiệm các mô hình:
 
-### 2. Exploratory Data Analysis (EDA)
-
-The notebook performs EDA on both the original and feature engineered datasets, including:
-
-* Distribution of numerical features (Age, Fare, etc.)
-* Distribution of categorical features (Sex, Pclass, Embarked, etc.)
-* Correlation analysis between features and with the target
-* Visualizations to understand survival patterns across different groups
-
-Some key findings are summarized in the notebook, for example:
-
-* Higher ticket class (Pclass) and higher fares are associated with higher survival rates
-* Sex is a strong predictor of survival
-* Family related features (siblings, parents, children) add useful information
-
-### 3. Feature engineering
-
-Several new features are created to improve model performance, including for example:
-
-* **Title** extracted from the passenger name
-* **FamilySize** combining `SibSp` and `Parch`
-* **FamilySize_Bucketized** grouping passengers into categories such as Alone, Medium, Large
-
-These features help the models capture more meaningful patterns from the data, such as social status and group size.
-
-### 4. Data preprocessing
-
-A preprocessing pipeline is built using `scikit-learn`, including:
-
-* Handling missing values with `SimpleImputer`
-* Scaling numerical features using `StandardScaler`
-* Encoding categorical variables using `OneHotEncoder` or `OrdinalEncoder`
-* Using `ColumnTransformer` and `Pipeline` to combine preprocessing steps and models in a clean and reproducible way
-
-This pipeline is later reused across multiple models, which makes experimentation easier and less error prone.
-
-### 5. Model selection and experiments
-
-The notebook explores multiple approaches.
-
-#### Approach 1: Baseline models and PCA
-
-* Train several baseline models without heavy tuning, such as:
-
-  * Logistic Regression
-  * Random Forest
-  * XGBoost
-  * KNN
-  * SVM
-* Apply PCA to reduce dimensionality when there are many features
-* Compare:
-
-  * Models on the original feature space
-  * Models on PCA transformed features
-
-Observations:
-
-* PCA can reduce the number of features while retaining most of the variance.
-* However, model performance slightly decreases after PCA in this project.
-* Therefore, the original feature space is kept for later steps.
-
-#### Approach 2: Feature importance and feature selection
-
-To simplify the model and focus on the most informative features, the notebook:
-
-1. Trains models such as Random Forest and XGBoost.
-2. Extracts `feature_importances_` from each model.
-3. Ranks features and combines scores from different models.
-4. Selects the strongest features for further experiments.
-
-Scenarios evaluated:
-
-* **Scenario 1**: Use all available features
-* **Scenario 2**: Remove redundant categorical features and keep only the top features
-
-The notebook then compares performance between using all features and using only the strongest ones.
-
-#### Model optimization using Voting Classifier
-
-The project also experiments with an ensemble Voting Classifier combining:
-
-* KNN
+* Logistic Regression
 * Random Forest
+* SVC
 * XGBoost
+* KNN
 
-This configuration is tested to see whether combining several strong models improves performance. In this specific case, the Voting Classifier does not outperform the best standalone model.
+Kèm bản PCA để so sánh.
 
----
+### 5. Feature Selection & Scenarios
 
-## Final model and results
+* Rút trích feature importance từ RF và XGB
+* So sánh tập feature đầy đủ vs tập rút gọn
+* Đánh giá hai scenario: giữ tất cả feature hoặc giữ 5 feature mạnh nhất
 
-Based on the experiments, the notebook concludes that:
+### 6. Final Model
 
-* The most effective configuration is to keep the 5 strongest features and use a **KNN classifier with tuned hyperparameters**.
-* This KNN model achieves approximately:
+Mô hình chọn cuối cùng:
 
-  * **Accuracy**: 85.3%
-  * **F1 score**: 0.792
-
-This solution is preferred because it offers:
-
-* High performance on the validation set
-* Low complexity, easy to implement and deploy
-* Reasonable interpretability
+* **KNN với hyperparameter tuning**
+* Accuracy ~ **85.3%**
+* F1-score ~ **0.792**
 
 ---
 
-## Technologies and libraries
-
-The project mainly uses:
+## Technologies Used
 
 * Python
-* Jupyter Notebook
 * NumPy, Pandas
 * Matplotlib, Seaborn, Plotly
 * Scikit-learn
 * XGBoost
-* SciPy
 * Statsmodels
+* SciPy
 
 ---
 
-## How to run the notebook
+## Installation
 
-1. **Clone the repository**
+```bash
+git clone <your_repo_link>
+cd titanic-machine-learning-from-disaster
 
-   ```bash
-   git clone https://github.com/LQB464/titanic-machine-learning-from-disaster.git
-   cd titanic-machine-learning-from-disaster
-   ```
+python -m venv .venv
+source .venv/bin/activate     # hoặc .venv\Scripts\activate trên Windows
 
-2. **Set up a Python environment**
-
-   Create and activate a virtual environment if you wish:
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # on Linux or macOS
-   .venv\Scripts\activate         # on Windows
-   ```
-
-3. **Install required packages**
-
-   Install the core libraries used in the notebook, for example:
-
-   ```bash
-   pip install numpy pandas matplotlib seaborn plotly scikit-learn xgboost statsmodels scipy
-   ```
-
-4. **Download Kaggle data**
-
-   * Go to the competition page: [https://www.kaggle.com/competitions/titanic](https://www.kaggle.com/competitions/titanic)
-   * Download `train.csv` (and `test.csv` if needed)
-   * Place them inside the `dataset/` folder or adjust the paths in the notebook to match your setup
-
-5. **Open the notebook**
-
-   ```bash
-   jupyter notebook
-   ```
-
-   Then open:
-
-   ```text
-   notebook/titanic-machine-learning-from-disaster.ipynb
-   ```
-
-6. **Run all cells**
-
-   Run the notebook from top to bottom to reproduce the full analysis and model training. You can also modify parts of the code to test additional models or feature engineering ideas.
+pip install -r requirements.txt
+```
 
 ---
 
-## Future work
+## Running the Pipeline
 
-Some possible extensions for this project:
+Chạy toàn bộ pipeline huấn luyện và tạo submission:
 
-* Try more advanced feature engineering (for example target encoding, interaction features)
-* Explore other model families (LightGBM, CatBoost, neural networks)
-* Perform more systematic hyperparameter optimization
-* Use cross validation more extensively instead of a single train test split
-* Track and compare Kaggle leaderboard scores for different model versions
+```bash
+python -m src.main
+```
+
+Các tùy chọn:
+
+```bash
+# Chỉ chạy baseline
+python -m src.main --skip-tuning
+
+# Chỉ tuning + train final model
+python -m src.main --skip-baseline
+```
+
+Sau khi chạy, output nằm trong:
+
+```
+output/baseline_results.csv
+output/submission_knn.csv
+```
+
+---
+
+## Running the Notebook (EDA)
+
+```bash
+jupyter notebook notebook/titanic-machine-learning-from-disaster.ipynb
+```
+
+Notebook chứa toàn bộ nội dung:
+
+* Data validation
+* EDA
+* Biểu đồ trực quan
+* Phân tích survival rate
+* Giải thích feature engineering
+* So sánh mô hình
+
+---
+
+## Future Work
+
+* Thêm feature engineering nâng cao
+* Thử LightGBM, CatBoost
+* Dùng Optuna để tuning tự động
+* Sử dụng cross validation toàn diện
+* Thử Voting/Stacking nâng cấp
 
 ---
 
 ## Acknowledgements
 
-* Kaggle Titanic Machine Learning from Disaster competition and dataset
-* Open source libraries in the Python data science ecosystem
-
-```
+* Kaggle Titanic Dataset
+* Open-source Python Data Science Ecosystem
